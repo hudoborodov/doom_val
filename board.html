@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DOOM</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/js-dos.css" />
+    <style>
+        html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Trebuchet MS', system-ui, sans-serif; }
+        #dos { position: absolute; inset: 0; }
+        /* Start gate: browsers need a user gesture before pointer-lock + audio can arm. */
+        #gate {
+            position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 14px; cursor: pointer;
+            background: radial-gradient(circle at 50% 40%, #3a0000 0%, #120000 60%, #000 100%);
+            color: #ffb3b3; text-align: center; user-select: none;
+        }
+        #gate .logo { width: min(70vw, 560px); height: auto; image-rendering: pixelated;
+            filter: drop-shadow(0 6px 14px rgba(0,0,0,.6)); margin-bottom: 6px; }
+        #gate p { margin: 0; font-size: clamp(13px, 2.5vw, 18px); opacity: .85; }
+        #gate .go { margin-top: 8px; padding: 10px 26px; border: 2px solid #e33; border-radius: 6px;
+            font-size: clamp(14px, 3vw, 20px); color: #fff; background: rgba(200,20,20,.25);
+            text-transform: uppercase; letter-spacing: .12em; }
+        #gate.hidden { display: none; }
+        #err { position: absolute; left: 12px; bottom: 10px; z-index: 11; color: #f77;
+            font: 12px/1.4 monospace; max-width: 80%; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div id="dos"></div>
+    <div id="gate">
+        <img class="logo" src="https://cdn.jsdelivr.net/gh/hudoborodov/doom_val@main/m_doom.png" alt="DOOM" />
+        <p>Knee-Deep in the Dead &mdash; shareware episode&nbsp;1</p>
+        <p>Move: <b>&larr; &uarr; &darr; &rarr;</b> &nbsp;&middot;&nbsp; Fire: <b>Ctrl</b> &nbsp;&middot;&nbsp; Open: <b>Space</b> &nbsp;&middot;&nbsp; Run: <b>Shift</b></p>
+        <div class="go">Click to play</div>
+    </div>
+    <div id="err" hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/js-dos.js"></script>
+    <script>
+        (function () {
+            var gate = document.getElementById('gate');
+            var errBox = document.getElementById('err');
+            var started = false;
+
+            function fail(msg) {
+                errBox.hidden = false;
+                errBox.textContent = 'DOOM failed to load: ' + msg;
+            }
+
+            function start() {
+                if (started) return;
+                started = true;
+                gate.classList.add('hidden');
+                try {
+                    if (typeof Dos !== 'function') { fail('js-dos engine did not load from CDN.'); return; }
+                    Dos(document.getElementById('dos'), {
+                        // Game data: shareware DOOM bundle on jsDelivr (allowed by the board sandbox CSP).
+                        url: 'https://cdn.jsdelivr.net/gh/hudoborodov/doom_val@main/doom-shareware.jsdos',
+                        // Emulator runtime (emulators.js + wdosbox.js/.wasm) from jsDelivr too — the js-dos
+                        // default host is not on the sandbox allowlist, so it must be repointed here.
+                        pathPrefix: 'https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/emulators/',
+                        // Main-thread: the board sandbox CSP has no worker-src, so the default Worker backend
+                        // is blocked. This runs wdosbox on the main thread instead.
+                        workerThread: false,
+                        autoStart: true,
+                        noCloud: true,
+                        noSocket: true,
+                        onEvent: function (event) { if (event === 'emu-error') fail('emulator error'); }
+                    });
+                } catch (e) {
+                    fail((e && (e.message || e)) || 'unknown error');
+                }
+            }
+
+            gate.addEventListener('click', start);
+        })();
+    </script>
+</body>
+</html>
